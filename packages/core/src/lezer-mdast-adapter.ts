@@ -4,6 +4,7 @@ import type { SyntaxNode, Tree } from "@lezer/common";
 import { parser as commonmarkParser, GFM } from "@lezer/markdown";
 
 import { footnoteExtension } from "./lezer-footnote-extension";
+import { detectFrontmatterBlock } from "./frontmatter";
 import type {
   Blockquote,
   Code,
@@ -30,6 +31,7 @@ import type {
   TableRow,
   Text,
   ThematicBreak,
+  Yaml,
 } from "mdast";
 
 import { findChildByName, headingDepth } from "./lezer-helpers";
@@ -716,27 +718,96 @@ function adaptBlockChild(source: Source, node: SyntaxNode): Content | null {
 }
 
 /**
- * Walk the editor's Lezer syntax tree and synthesize an mdast Root with the
- * subset of fields consumed by the live-preview pipeline. Synchronous; safe
- * to call inside StateField.update / view updateListener (Lezer parse is
- * incremental and the tree is intrinsic to EditorState).
+ * Adapt the top-level children of a Lezer tree. Shared by the
+ * frontmatter-aware entry below and by the remainder re-parse.
  */
-function walkRoot(tree: Tree, source: Source): Root {
+function walkBlocks(tree: Tree, source: Source): RootContent[] {
   const children: RootContent[] = [];
   const cursor = tree.cursor();
-  if (!cursor.firstChild()) {
-    return { type: "root", children: [], position: position(0, source.length) };
-  }
+  if (!cursor.firstChild()) return children;
   do {
     const node = cursor.node;
     const block = adaptBlockChild(source, node);
     if (block) children.push(block as RootContent);
   } while (cursor.nextSibling());
-  return {
-    type: "root",
-    children,
-    position: position(0, source.length),
-  };
+  return children;
+}
+
+function shiftPositions(node: Root | RootContent, delta: number): void {
+  const pos = (node as Partial<PositionedNode>).position;
+  if (pos) {
+    pos.start.offset += delta;
+    pos.end.offset += delta;
+  }
+  const children = (node as { children?: Array<Root | RootContent> }).children;
+  if (children) {
+    for (const child of children) shiftPositions(child, delta);
+  }
+}
+
+/**
+ * Walk the editor's Lezer syntax tree and synthesize an mdast Root with the
+ * subset of fields consumed by the live-preview pipeline. Synchronous; safe
+ * to call inside StateField.update / view updateListener (Lezer parse is
+ * incremental and the tree is intrinsic to EditorState).
+ *
+ * Frontmatter is detected line-wise from the source (see frontmatter.ts)
+ * rather than from Lezer node names: the stock parser tokenizes the fences
+ * as HorizontalRule and the body as a paragraph. Siblings fully inside the
+ * detected region are dropped. A sibling STRADDLING the region end (e.g. an
+ * unclosed code fence inside the frontmatter body swallowing the closing
+ * `---`) would corrupt positions, so the remainder is re-parsed and its
+ * positions shifted back to document coordinates in that case only.
+ */
+function walkRoot(tree: Tree, source: Source): Root {
+  const text = source.slice(0, source.length);
+  const frontmatter = detectFrontmatterBlock(text);
+  if (!frontmatter) {
+    return {
+      type: "root",
+      children: walkBlocks(tree, source),
+      position: position(0, source.length),
+    };
+  }
+
+  const children: RootContent[] = [
+    {
+      type: "yaml",
+      value: frontmatter.value,
+      position: position(frontmatter.from, frontmatter.to),
+    } satisfies Yaml,
+  ];
+
+  const cursor = tree.cursor();
+  let straddler: SyntaxNode | null = null;
+  const kept: SyntaxNode[] = [];
+  if (cursor.firstChild()) {
+    do {
+      const node = cursor.node;
+      if (node.to <= frontmatter.to) continue;
+      if (node.from < frontmatter.to) {
+        straddler = node;
+        break;
+      }
+      kept.push(node);
+    } while (cursor.nextSibling());
+  }
+
+  if (!straddler) {
+    for (const node of kept) {
+      const block = adaptBlockChild(source, node);
+      if (block) children.push(block as RootContent);
+    }
+    return { type: "root", children, position: position(0, text.length) };
+  }
+
+  const remainder = text.slice(frontmatter.to);
+  if (remainder.trim().length > 0) {
+    const subRoot = walkBlocks(getStringParser().parse(remainder), stringSource(remainder));
+    for (const child of subRoot) shiftPositions(child, frontmatter.to);
+    children.push(...subRoot);
+  }
+  return { type: "root", children, position: position(0, text.length) };
 }
 
 export function lezerTreeToMdast(state: EditorState, tree: Tree = syntaxTree(state)): Root {

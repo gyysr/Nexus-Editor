@@ -1,7 +1,7 @@
 import { type EditorState, RangeSet, RangeSetBuilder, StateEffect, StateField, type Extension, type Range, type SelectionRange, type Transaction } from "@codemirror/state";
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, WidgetType } from "@codemirror/view";
 import { ensureSyntaxTree } from "@codemirror/language";
-import type { Code, FootnoteDefinition, FootnoteReference, Heading, Html, List, Root, Table } from "mdast";
+import type { Code, FootnoteDefinition, FootnoteReference, Heading, Html, List, Root, Table, Yaml } from "mdast";
 
 import type { CodeHighlightToken } from "./types";
 import { lezerStringToMdast, lezerTreeToMdast } from "./lezer-mdast-adapter";
@@ -714,6 +714,50 @@ function buildHtmlDecorations(
   );
 }
 
+function buildFrontmatterDecorations(
+  range: { from: number; to: number; node: Yaml; source: string },
+  selection: readonly SelectionRange[],
+  decos: Range<Decoration>[],
+  viewRef: { current: EditorView | null }
+): void {
+  // Raw source stays visible (and editable) while the cursor is inside the
+  // block — same contract as HTML / mermaid blocks. `inclusiveEnd: true` so
+  // a caret parked on the closing offset still counts as inside.
+  const cursorInside = selectionIntersects(range.from, range.to, selection, true);
+  if (cursorInside) return;
+
+  const chip = document.createElement("span");
+  chip.textContent = "··· frontmatter";
+  chip.style.cssText =
+    "font-size:0.75em;font-family:ui-monospace,monospace;color:var(--nexus-text-muted);" +
+    "border:1px dashed var(--nexus-border);border-radius:4px;padding:1px 6px;" +
+    "cursor:pointer;user-select:none;";
+  const wrapper = document.createElement("div");
+  wrapper.style.cssText =
+    "display:flex;align-items:center;margin:0;padding:0;line-height:normal;";
+  wrapper.appendChild(chip);
+
+  // Click the chip to drop the caret at the block start; the next
+  // decoration pass sees the cursor inside and reveals the raw YAML.
+  wrapper.addEventListener("mousedown", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const v = viewRef.current;
+    if (!v) return;
+    const safeFrom = Math.min(range.from, v.state.doc.length);
+    v.dispatch({ selection: { anchor: safeFrom } });
+    v.focus();
+  });
+
+  const fmKey = `fm:${range.from}:${range.to}:${range.source}`;
+  decos.push(
+    Decoration.replace({
+      widget: createWidget(wrapper, true, 22, fmKey),
+      block: true,
+    }).range(range.from, range.to)
+  );
+}
+
 const BLOCKQUOTE_MARKER_RE = /^( {0,3}>[ \t]?)/;
 const ALERT_TAG_RE = /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*$/;
 
@@ -1094,6 +1138,13 @@ function buildDecorations(
         selection,
         decos,
         config,
+        viewRef
+      );
+    } else if (range.node.type === "yaml") {
+      buildFrontmatterDecorations(
+        range as { from: number; to: number; node: Yaml; source: string },
+        selection,
+        decos,
         viewRef
       );
     } else if (range.node.type === "list") {

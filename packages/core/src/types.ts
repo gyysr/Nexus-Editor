@@ -1,5 +1,5 @@
 import type { Extension } from "@codemirror/state";
-import type { Blockquote, Code, Definition, Delete, Emphasis, FootnoteDefinition, FootnoteReference, Heading, Html, Image, InlineCode, Link, List, Root, Strong, Table, ThematicBreak } from "mdast";
+import type { Blockquote, Code, Definition, Delete, Emphasis, FootnoteDefinition, FootnoteReference, Heading, Html, Image, InlineCode, Link, List, Root, Strong, Table, ThematicBreak, Yaml } from "mdast";
 import type { Plugin } from "unified";
 
 export interface CodeHighlightToken {
@@ -44,7 +44,8 @@ export type LivePreviewNode =
   | List
   | Strong
   | Table
-  | ThematicBreak;
+  | ThematicBreak
+  | Yaml;
 
 export type LivePreviewNodeType = LivePreviewNode["type"];
 
@@ -369,6 +370,13 @@ export interface SetDocumentOptions {
 export interface EditorAPI {
   getDocument(): string;
   getAst(): Root;
+  /**
+   * Raw YAML body of the document's frontmatter block (text between the
+   * fences, without the fences and without the trailing line ending), or
+   * null when the document has no frontmatter. Parsing/serializing the
+   * YAML itself is host policy — core exposes the raw text only.
+   */
+  getFrontmatter(): string | null;
   getTableOfContents(): TocEntry[];
   exportHTML(): string;
   setTheme(theme: import("./theme").NexusTheme): void;

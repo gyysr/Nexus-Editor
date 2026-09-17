@@ -27,7 +27,8 @@ function isLivePreviewNode(node: Content): node is LivePreviewNode {
     node.type === "link" ||
     node.type === "strong" ||
     node.type === "table" ||
-    node.type === "thematicBreak"
+    node.type === "thematicBreak" ||
+    node.type === "yaml"
   );
 }
 
@@ -128,7 +129,7 @@ function visit(
         continue;
       }
 
-      if (child.type === "heading" || child.type === "list" || child.type === "code" || child.type === "definition" || child.type === "html") {
+      if (child.type === "heading" || child.type === "list" || child.type === "code" || child.type === "definition" || child.type === "html" || child.type === "yaml") {
         // Always emitted regardless of cursor position.
         // buildDecorations decides decoration treatment based on cursor.
         ranges.push({ from, to, node: child, source: doc.slice(from, to) });

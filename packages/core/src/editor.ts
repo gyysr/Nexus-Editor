@@ -8,7 +8,7 @@ import { EditorView, keymap, dropCursor, lineNumbers, type Direction } from "@co
 import { indentWithTab, undo as cmUndo, redo as cmRedo } from "@codemirror/commands";
 import { closeBrackets } from "@codemirror/autocomplete";
 import type { Root } from "mdast";
-import type { Heading } from "mdast";
+import type { Heading, Yaml } from "mdast";
 import rehypeStringify from "rehype-stringify";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
@@ -26,6 +26,7 @@ import { createLivePreviewExtension } from "./live-preview";
 import { flushPendingTableEdits } from "./live-preview-table";
 import { createMarkdownLanguageSupport } from "./lezer-markdown";
 import { lezerStringToMdast, lezerTreeToMdast } from "./lezer-mdast-adapter";
+import { createFrontmatterRemarkPlugin } from "./frontmatter";
 import { markdownFoldService } from "./markdown-fold";
 import { resolveLocale } from "./locale";
 import { markdownAutoPair } from "./markdown-autopair";
@@ -145,6 +146,9 @@ function markdownToHtml(
   applyDynamicTransforms: (tree: Root) => Root,
 ): string {
   const processor = unified().use(remarkParse);
+  // Normalize a leading frontmatter block into one mdast yaml node before any
+  // host plugin runs, so remarkPlugins observe the same tree getAst() exposes.
+  processor.use(createFrontmatterRemarkPlugin(markdown));
   for (const plugin of plugins) {
     for (const rp of plugin.remarkPlugins ?? []) {
       processor.use(rp);
@@ -782,6 +786,12 @@ export function createEditor(config: EditorConfig): EditorAPI {
     },
     getAst() {
       return currentAst;
+    },
+    getFrontmatter() {
+      const node = currentAst.children.find(
+        (child): child is Yaml => child.type === "yaml"
+      );
+      return node ? node.value : null;
     },
     getTableOfContents() {
       return extractToc(currentAst);
