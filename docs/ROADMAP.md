@@ -37,6 +37,7 @@ This document maps every planned feature to **package ownership / priority / sta
 | 6 | Multi-cursor / multi-selection | `core` | P1 | done | Yes | `openspec/changes/add-core-multi-cursor` — opt-in `multiCursor` config; live-preview reveal + table checks verified by regression tests |
 | 7 | AST enhancement / Markdown extensions | `core` + `preset-gfm` | P2 | planned | Yes | Affects serialization and every AST-dependent plugin |
 | 8 | Undo / redo grouping | `plugin-history` | P1 | planned | No | Coordinate with table's `tableEditingCount`; consolidate competing impls before merge |
+| 30 | YAML frontmatter (`---`) as a first-class AST node | `core` | P1 | in-progress | Yes | Dual-pipeline yaml node (Lezer adapter + remark normalize, zero new deps) + live-preview chip + `getFrontmatter()` — see `openspec/changes/add-frontmatter-support` |
 
 ## 4. Plugin System
 

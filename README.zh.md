@@ -209,6 +209,7 @@ pnpm dev:electron-demo
 ```ts
 editor.getDocument()          // 当前 Markdown 文本
 editor.getAst()               // 当前 mdast 语法树
+editor.getFrontmatter()       // 开头 `---` 块的原始 YAML 正文，无则返回 null
 editor.setDocument(md)        // 替换整个文档
 editor.setDocument(md, { silent: true, preserveSelection: true })
 editor.setDocument(md, { selection: { anchor: 0 } })

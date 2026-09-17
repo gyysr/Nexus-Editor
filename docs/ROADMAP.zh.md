@@ -37,6 +37,7 @@
 | 6 | 多光标 / 多选支持 | `core` | P1 | done | 是 | `openspec/changes/add-core-multi-cursor` — opt-in `multiCursor` 配置；live-preview 揭示与表格检查已有回归测试覆盖 |
 | 7 | AST 增强 / Markdown 扩展 | `core` + `preset-gfm` | P2 | planned | 是 | 影响序列化与所有依赖 AST 的插件 |
 | 8 | undo / redo 分组 | `plugin-history` | P1 | planned | 否 | 注意与表格交互的 `tableEditingCount` 协同；合并前需收敛多个竞品实现 |
+| 30 | YAML frontmatter（`---`）成为一等 AST 节点 | `core` | P1 | in-progress | 是 | 双管线 yaml 节点（Lezer 适配器 + remark 归一化，零新依赖）+ live-preview 折叠 chip + `getFrontmatter()` —— 见 `openspec/changes/add-frontmatter-support` |
 
 ## 4. 插件系统
 

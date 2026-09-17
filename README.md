@@ -209,6 +209,7 @@ Plugin platform documentation (Chinese): [native plugin API](./docs/plugins/nati
 ```ts
 editor.getDocument()          // current Markdown string
 editor.getAst()               // current mdast Root
+editor.getFrontmatter()       // raw YAML body of the leading `---` block, or null
 editor.setDocument(md)        // replace entire document
 editor.setDocument(md, { silent: true, preserveSelection: true })
 editor.setDocument(md, { selection: { anchor: 0 } })
