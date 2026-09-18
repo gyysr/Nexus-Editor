@@ -105,8 +105,6 @@
 - [ ] 8.4 Manual smoke in the electron demo — deferred; the jsdom
   integration tests in `packages/core/test/frontmatter.test.ts` cover the
   same chip interactions a manual smoke would.
-- [ ] 8.5 `openspec validate add-frontmatter-support --strict` — CLI not
-  installed in the dev environment. Spec format hand-linted against
-  `openspec/AGENTS.md` §"Spec File Format" (each `### Requirement:` has
-  at least one `#### Scenario:` with `**WHEN**`/`**THEN**` bullets; delta
-  files use `## ADDED Requirements`).
+- [x] 8.5 `openspec validate add-frontmatter-support --strict` — passes
+  ("Change 'add-frontmatter-support' is valid"), run via
+  `npx -y @fission-ai/openspec validate add-frontmatter-support --strict`.
