@@ -71,6 +71,16 @@ editor.on("selectionChange", ({ anchor, head, ranges, mainIndex }) => {
 
 Multiple ranges in `setSelections` require `multiCursor: true` — without the flag CodeMirror collapses the selection to its main range.
 
+## Frontmatter
+
+A document that begins with a YAML frontmatter block (`---` fences, micromark-extension-frontmatter semantics) is parsed as a single mdast `yaml` node — not `thematicBreak + paragraph + thematicBreak` — in both the `getAst()` tree and the `exportHTML()` pipeline (where the block is stripped from the rendered article).
+
+```ts
+editor.getFrontmatter();  // raw YAML body between the fences, or null
+```
+
+Parsing / serializing the YAML itself is host policy — core exposes the raw text only, so hosts can bring their own `yaml` / `js-yaml`. In live preview the block collapses into a `··· frontmatter` chip when the cursor is outside; click the chip (or move the caret inside) to reveal and edit the raw source.
+
 ## Other config highlights
 
 See the `EditorConfig` type for the full surface: `livePreview`, `plugins`, `theme` / `setTheme`, `locale`, `readOnly`, `tabSize`, `direction`, `indentGuides`, `parseDelayMs`, `slashMenuLimit`, `onChange` / `onFocus` / `onBlur` / `onAssetUpload`.
